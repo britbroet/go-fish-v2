@@ -5,6 +5,8 @@ var compHandUI = $('#compHandUI');
 var userMatchesUI = $('#userMatchesUI');
 var compMatchesUI = $('#compMatchesUI');
 
+var msg = $('#messageBox');
+
 var userHandArray = [];
 var compHandArray = [];
 var userMatchesArray=[];
@@ -14,8 +16,11 @@ var newCard;
 var setNumber;
 var deck = [];
 
+var userTurn = true;
+
+
 // BUILD DECK AUTOMATICALLY
-var buildDeck = function() {
+var buildDeck = function(callback) {
 	var numberOption =["ace","two","three", "four", "five", "six", "seven", "eight", "nine", "ten", "jack", "queen", "king"];
 	var suitOption = ["spades", "clubs", "diamonds", "hearts"];
 
@@ -26,6 +31,7 @@ var buildDeck = function() {
 		    );
 		}
 	}
+	callback();
 }
 
 // SET CARD LANGUAGE (case/switch function)
@@ -67,33 +73,18 @@ var buildDeck = function() {
 
 // DEAL 
 
-var deal = function(){
-	while (userHandArray.length < 25) {
-		addToHand(compHandArray, compHandUI, createCard(drawFromDeck(), 'comp'), newCard);
-		addToHand(userHandArray, userHandUI, createCard(drawFromDeck(), 'user'), newCard);
-	}
+var dealUser = function(){
+		setTimeout(function(){
+			addToHand(userHandArray, userHandUI, createCard(drawFromDeck(), 'user'), newCard)}, 250);
 }
 
-// CHECK FOR MATCHES IN OPPONENT HAND (and prep for retrieval)
-
-// var checkForMatch = function (card, playerHandArray, opponentHandArray) {
-// 	var matches = 0;
-// 	for (var i = 0; i < opponentHandArray.length; i++) {
-// 		if (opponentHandArray[i].cardNumber === card) {
-// 			//var uiClass = opponentHandArray[i].cardId;
-// 			$('.' + card + '.card_in_comp_hand').addClass('gotcha');
-// 			playerHandArray.push(opponentHandArray[i]);
-// 			opponentHandArray.splice(opponentHandArray[i], 1);
-// 			matches += 1;
-// 		}
-// 	}
-// 	return matches;
-// }
+var dealComp = function(callback){
+			addToHand(compHandArray, compHandUI, createCard(drawFromDeck(), 'comp'), newCard);
+			callback();
+}
 
 
 var checkForMatch = function (card, player) {
-	// var playerArr;
-	// var opponentArr;
 	if (player === 'user') {
 		var playerArr = userHandArray;
 		var opponentArr = compHandArray;
@@ -161,6 +152,7 @@ var retrieveMatches = function(playerHandUI) {
 	var matchesWon = $('.gotcha');
 	console.log('matches one: ' + matchesWon);
 	playerHandUI.append(matchesWon);
+	matchesWon.addClass('matched');
 	matchesWon.removeClass('gotcha');
 }
 
@@ -169,7 +161,6 @@ var retrieveMatches = function(playerHandUI) {
 
 var checkForSet = function(player) {
 	var hand;
-
 	if (player === 'user') {
 		hand = userHandArray;
 	}
@@ -179,24 +170,42 @@ var checkForSet = function(player) {
 
 	console.log('player: ' + player);
 
-	for (var i = 0; i < (hand.length - 3); i++) {
+	for (var i = 0; i < (hand.length - 1); i++) {
 		var setCount = 0;
 		//var thisCardId = hand[i].cardId;
 		for (var j = 0; j < hand.length; j++) {
-			if (i != j) {
-				if (hand[i].cardNumber == hand[j].cardNumber) {
+			if ((i != j) && (hand[i].cardNumber === hand[j].cardNumber)) {
+				if (setCount < 2) {
 					setCount += 1;
 				}
-			}	
-		}
-		console.log('setcount: ' + setCount);
-		if (setCount === 3) {
-			setNumber = hand[i].cardNumber;
-			console.log('check for match: found set of ' + setNumber + ' in ' + player + ' hand');
-			foundSet(setNumber, player);
-			return
-		}
-	}
+				else if (setCount === 2) {
+					var setNumber = hand[i].cardNumber;
+					return [true, setNumber, player];
+				}
+				else {
+					console.log('error: set count = ' + setCount);
+				}
+			} // end of if
+		} // end of for j	
+	} // end of for i
+	console.log('setcount: ' + setCount);
+	return [false, null, player];
+
+
+	// var results = function() {
+	// 	var found;
+
+	// 	if (setCount === 3) {
+	// 		found = true;
+	// 		setNumber = hand[i].cardNumber;
+	// 		console.log('check for match: found set of ' + setNumber + ' in ' + player + ' hand');
+	// 		return [found, setNumber, player];
+	// 	}
+	// 	else {
+	// 		found = false;
+	// 		return [found, setNumber, player];
+	// 	}
+	// }
 }
 
 // FOUND SET
@@ -206,23 +215,33 @@ var foundSet = function(setNumber, player) {
 	// var card = convert(setNumber);
 	if (player === 'user') {
 		$('.' + setNumber).addClass('new_set_user');
-		$('#messageBox').text("found set: You found every " + setNumber + "!");
-		$('#file_matches_button').show();
-		
-		$('#file_matches_button').click(function() {
-			$('#file_matches_button').hide();
-			moveToSetPile('user', setNumber);
-		});
+		$('#file_set_button').show();
+		if (deck.length === 2) {
+			msg.text("You were dealt a set of " + setNumber + "!");
+		}
+		else {
+			msg.text("You made a set of " + setNumber + "!");
+		}
+
 	}
 	else if (player === 'comp') {
 		$('.' + setNumber).addClass('new_set_comp');
-		$('#messageBox').text("found set: Bummer, the computer made a set of " + setNumber);		
+		if (deck.length === 2) { //if this is after deal, before play starts
+			msg.text("Bummer - looks like the computer was dealt a set of " + setNumber);
+			setTimeout(function(){
+				moveToSetPile('comp', setNumber);
+				msg.text("Let's get started! You go first - select a card in your hand to ask computer for.");
+				userTurn = true;
+			}, 2000);
+		}
+		else {
+		msg.text("found set: Bummer, the computer made a set of " + setNumber);
+		}		
 	}
 	else {
 		console.log('error - player not comp or user');
 	}
 }
-
 
 
 // MOVE SET TO MATCH PILE
@@ -273,7 +292,7 @@ var moveToSetPile = function(player, setNumber) {
 // USER TURN
 
 	// USER SELECTS CARD FROM THEIR HAND TO ASK ABOUT
-
+if (userTurn === true) {
 	$(document).on('click', '.card_in_user_hand', function (){
 		console.log('clicked card firing');
 		$('#ask_button').show();
@@ -302,31 +321,136 @@ var moveToSetPile = function(player, setNumber) {
 		}
 		
 	});
+}
 
 // ASK BUTTON
 
 $('#ask_button').click(function() {
+	msg.text("");
 	$('#ask_button').hide();
-	var requestedCard = $('.selected_card').attr('data-number');
-	console.log('ask button fired, asking for: ' + requestedCard);
-	checkForMatch(requestedCard, 'user');
+	var selectedCard = $('.selected_card').attr('data-number');
+		console.log('ask button fired, asking for: ' + selectedCard);
+	setTimeout(function() {
+		var matches = checkForMatch(selectedCard, 'user');
+		if (matches > 0) {
+			msg.text("You found matching cards!");
+			setTimeout(function() {
+				retrieveMatches(userHandUI);
+				var set = checkForSet('user')[0];
+				if (set === true) {
+					var setNumber = checkForSet('user')[1];
+					foundSet(setNumber, 'user');
+				}
+				msg.text("Go again!");
+			}, 1000);
+		}
+	}, 1000);
 });
 
+// FILE SET BUTTON
 
-
+	$('#file_set_button').click(function() {
+		$('#file_set_button').hide();
+		setNumber = $('.new_set_user').attr('data-number');
+		moveToSetPile('user', setNumber);
+		if (deck.length < 2) {
+			msg.text('Go again!');
+		}
+		else {
+			msg.text('You go first!');
+		}
+	});
 
 // MESSAGING
 
 
 
-//START GAME
 
-buildDeck();
-deal();
-console.log('done with deal');
-checkForSet('user');
+// USER TURN
+// beginning
+var startGameOLD = function() {
+	if (checkForSet('user')[0] === true) {
+		console.log('you found a set');
+		// highlight cards and show that user found a set
+		return checkForSet('user');
+	}
+	else {
+		console.log("you didn't find a set");
+	}
+	if (checkForSet('comp')[0] === true) {
+		console.log('computer found a set');
+		// highlight cards and show that user found a set
+		
+	}
+	else {
+		console.log("comp didn't find a set");
+	}
+}
+
+
+// GAME FLOW: DEAL CARDS
+var startGame = function(callback) {
+	buildDeck(function() {
+  	var alternate = setInterval(deal, 500);
+  	function deal() {
+  		if (userHandArray.length === 25) {
+	  		clearInterval(alternate);
+	  		console.log('done with deal ' + deck.length);
+	  		callback();
+	  	}
+	  	else {
+	  		dealComp(dealUser);
+	  	}
+	  }
+	});
+}
+
+
+// GAME FLOW: CHECK FOR DEALT SETS
+
+startGame(function(){
+	console.log('done! checking for set');
+	var userArr = checkForSet('user');
+	var compArr = checkForSet('comp');
+	if (compArr[0] === true) {
+		console.log('comp drew a set');
+		msg.text('Looks like the computer was dealt a set :P');
+		var setNumber = compArr[1];
+		foundSet(setNumber, 'comp');
+
+		if (userArr[0] === true) {
+			setTimeout(function(){
+				console.log('you drew a set');
+				msg.text('No worries! You drew a set too!');
+				var setNumber = userArr[1];
+				foundSet(setNumber, 'user');
+			}, 1000);
+		}
+	}
+	else if (userArr[0] === true) {
+		console.log('you found a set');
+		msg.text('What luck! You drew a set!');
+		var setNumber = userArr[1];
+		foundSet(setNumber, 'user');
+	}
+	else {
+		console.log('no sets dealt');
+	}
+});
+
+
+//setTimeout()
+
+// buildDeck();
+// deal();
+
+//checkForSet('user');
 //checkForSet('comp');
+//setTimeout(startGame(), 0);
 
 
+//GAME FLOW
 
-
+// build deck
+// deal
+// check computer hand for matc
