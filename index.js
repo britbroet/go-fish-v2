@@ -76,19 +76,65 @@ var deal = function(){
 
 // CHECK FOR MATCHES IN OPPONENT HAND (and prep for retrieval)
 
-var checkForMatch = function (card, playerHandArray, opponentHandArray) {
+// var checkForMatch = function (card, playerHandArray, opponentHandArray) {
+// 	var matches = 0;
+// 	for (var i = 0; i < opponentHandArray.length; i++) {
+// 		if (opponentHandArray[i].cardNumber === card) {
+// 			//var uiClass = opponentHandArray[i].cardId;
+// 			$('.' + card + '.card_in_comp_hand').addClass('gotcha');
+// 			playerHandArray.push(opponentHandArray[i]);
+// 			opponentHandArray.splice(opponentHandArray[i], 1);
+// 			matches += 1;
+// 		}
+// 	}
+// 	return matches;
+// }
+
+
+var checkForMatch = function (card, player) {
+	// var playerArr;
+	// var opponentArr;
+	if (player === 'user') {
+		var playerArr = userHandArray;
+		var opponentArr = compHandArray;
+		var opponentClass = 'card_in_comp_hand';
+		console.log('here: opparr: ', opponentArr);
+	}
+	else if (player === 'comp') {
+		var playerArr = compHandArray;
+		var opponentArr = userHandArray;
+		var opponentClass = 'card_in_user_hand';
+	}
 	var matches = 0;
-	for (var i = 0; i < opponentHandArray.length; i++) {
-		if (opponentHandArray[i].cardNumber == card) {
-			//var uiClass = opponentHandArray[i].cardId;
-			$('.' + card).addClass('gotcha');
-			playerHandArray.push(opponentHandArray[i]);
-			opponentHandArray.splice(opponentHandArray[i], 1);
+	opponentArr.forEach(function(oppCard) {
+		if (oppCard.cardNumber === card) {
+			$('.' + card + '.' + opponentClass).addClass('gotcha');
+			playerArr.push(oppCard);
+			opponentArr.splice(oppCard, 1);
+			console.log('player hand array: ', playerArr.length);
+			console.log('opp hand array after handover :', opponentArr.length);
 			matches += 1;
 		}
-	}
+	});
 	return matches;
 }
+
+
+// 	for (var i = 0; i < opponentArr.length; i++) {
+// 		if (opponentArr[i].cardNumber === card) {
+// 			//var uiClass = opponentHandArray[i].cardId;
+// 			$('.' + card + '.' + opponentClass).addClass('gotcha');
+// 			playerArr.push(opponentArr[i]);
+// 			opponentArr.splice(opponentArr[i], 1);
+// 			matches += 1;
+// 		}
+// 	}
+// 	return matches;
+// }
+
+
+
+
 
 
 // MATCH MESSAGING (right now would need to be called w/ checkForMatch)
@@ -257,6 +303,14 @@ var moveToSetPile = function(player, setNumber) {
 		
 	});
 
+// ASK BUTTON
+
+$('#ask_button').click(function() {
+	$('#ask_button').hide();
+	var requestedCard = $('.selected_card').attr('data-number');
+	console.log('ask button fired, asking for: ' + requestedCard);
+	checkForMatch(requestedCard, 'user');
+});
 
 
 
